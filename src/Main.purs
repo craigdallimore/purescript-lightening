@@ -3,10 +3,12 @@ module Main where
 import Prelude
 
 import Control.Apply (lift2)
+import Control.Monad.Except(runExcept)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import DOM (DOM)
 import DOM.Event.EventTarget (addEventListener, eventListener)
+import DOM.Event.MouseEvent (eventToMouseEvent, screenX, screenY)
 import DOM.Event.Types (Event)
 import DOM.HTML (window)
 import DOM.HTML.Event.EventTypes (click)
@@ -15,6 +17,7 @@ import DOM.HTML.Window (document)
 import DOM.Node.ParentNode (QuerySelector(QuerySelector), querySelector)
 import DOM.Node.Types (Element, ParentNode, elementToEventTarget)
 import Data.Maybe (Maybe, maybe)
+import Data.Either (Either(Right))
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
 import Graphics.Canvas (CANVAS, Context2D, closePath, fillPath, getCanvasElementById, getContext2D, lineTo, moveTo, setFillStyle)
@@ -30,7 +33,9 @@ canvasClickListener :: forall eff
     , console :: CONSOLE
     | eff
     ) Unit
-canvasClickListener e = log "clicked"
+canvasClickListener event = case runExcept (eventToMouseEvent event) of
+  Right me -> log $ "x: " <> show (screenX me) <> ", y: " <> show (screenY me)
+  _        -> log "Failed to use mouse event"
 
 bindCanvas
   :: forall eff
@@ -68,9 +73,8 @@ main
     ) Unit
 main = do
 
-  mCanvEl  <- window >>= document >>= (canvasSelector <<< htmlDocumentToParentNode)
+  el  <- window >>= document >>= (canvasSelector <<< htmlDocumentToParentNode)
+  el' <- getCanvasElementById "c"
+  ctx <- sequence (getContext2D <$> el')
 
-  mEl      <- getCanvasElementById "c"
-  maybeCtx <- sequence (getContext2D <$> mEl)
-
-  maybe (log "Could not find canvas") bindCanvas (lift2 Tuple mCanvEl maybeCtx)
+  maybe (log "Could not find canvas") bindCanvas (lift2 Tuple el ctx)
