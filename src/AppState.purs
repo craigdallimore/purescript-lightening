@@ -2,10 +2,17 @@ module Data.AppState where
 
 import Prelude
 
-newtype AppState = AppState { mouseX :: Int , mouseY :: Int }
+import Data.Foldable (foldr)
+
+newtype AppState = AppState (Array Point)
+
+newtype Point = Point { x :: Int, y :: Int }
+
+instance showPoint :: Show Point where
+  show (Point s) = "x: " <> show s.x <> ", y: " <> show s.y
 
 instance showAppState :: Show AppState where
-  show (AppState s) = "x: " <> show s.mouseX <> ", y: " <> show s.mouseY
+  show (AppState xs) = foldr (\p acc -> acc <> "\n" <> show p) "" xs
 
 initialAppState :: AppState
-initialAppState = AppState { mouseX : 0, mouseY : 0 }
+initialAppState = AppState []
